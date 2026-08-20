@@ -1,12 +1,11 @@
 {
-  "name": "buy-online-report-counter",
+  "name": "calc",
   "version": "1.0.0",
-  "description": "OCR-based meal report counter for airline catering",
+  "description": "Buy Online Report Counter – OCR based",
   "main": "index.html",
   "scripts": {
     "start": "vercel dev"
   },
-  "dependencies": {},
   "devDependencies": {
     "@vercel/node": "^2.9.0"
   },
