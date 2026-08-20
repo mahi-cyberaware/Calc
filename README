@@ -1,0 +1,63 @@
+# Buy Online Report Counter
+
+A mobile-first web application that uses OCR to read airline meal report images and automatically calculate totals for water, yoghurt, coffee, tray/plate, and cutlery.
+
+## Features
+
+- Upload one or multiple report images (photo or gallery)
+- OCR processing (via OCR.space API)
+- Automatic row detection and quantity extraction
+- Review and edit detected quantities
+- Calculate totals: Total, Water, Yoghurt, Coffee, Paper Tray/Plate, Cutlery
+- Copy results to clipboard
+- Page-by-page breakdown for multiple images
+
+## Deployment to Vercel
+
+### Prerequisites
+
+- A [Vercel](https://vercel.com) account
+- An [OCR.space](https://ocr.space) API key (free tier available)
+
+### Steps
+
+1. **Fork or clone this repository** to your GitHub account.
+
+2. **Import the project into Vercel**:
+   - Go to [vercel.com/new](https://vercel.com/new)
+   - Select your GitHub repository
+   - Configure the project:
+     - Framework Preset: **Other**
+     - Build Command: (leave empty)
+     - Output Directory: (leave empty)
+
+3. **Add Environment Variable**:
+   - In the Vercel project settings, go to "Environment Variables"
+   - Add `OCR_SPACE_API_KEY` with your OCR.space API key
+   - (Optional) Add `NODE_OPTIONS` with `--max-old-space-size=512` if needed
+
+4. **Deploy**:
+   - Vercel will automatically deploy your project.
+   - You'll get a URL like `https://buy-online-report-counter.vercel.app`
+
+5. **Use it**:
+   - Open the URL on your phone or desktop.
+   - Tap "Upload Report Image" to take a photo or select images.
+   - The app will automatically process the images and show results.
+
+## Local Development
+
+1. Clone the repository.
+2. Install dependencies: `npm install`
+3. Create a `.env` file with `OCR_SPACE_API_KEY=your_api_key`
+4. Run `vercel dev` to start a local server.
+5. Open `http://localhost:3000`
+
+## Customization
+
+- Edit the `CONFIG` object in `index.html` to add/remove meal codes for yoghurt, coffee, hot meals, etc.
+- Modify `api/ocr.js` to adjust OCR parsing logic.
+
+## License
+
+MIT
