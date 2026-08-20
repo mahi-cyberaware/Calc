@@ -153,63 +153,75 @@ Parse all OCR lines that contain an EASC code.
 This is deliberately generic: the meal code is read from
 the row; it is NOT required to be in HOT_CODES.
 */
+function detectSection(line, current){
+  const x = upper(line);
+  const m = x.match(/\b(\d{3})\s+YC\s+([A-Z]{3})\s*-\s*([A-Z]{3})\b/);
+  if(m) return `${m[1]}_${m[2]}_${m[3]}`;
+  return current || "PAGE";
+}
+
 function parseText(text,page){
  const out=[];
  const lines=String(text||"").split(/\r?\n/).map(clean).filter(Boolean);
+ let section="PAGE";
 
  for(const raw of lines){
+   section=detectSection(raw,section);
    const line=upper(raw);
    const m=line.match(/\bT3L4[A-Z0-9]+\b/);
    if(!m)continue;
    const easc=m[0], rest=line.slice((m.index||0)+m[0].length).trim();
    if(!rest)continue;
    const parts=rest.split(/\s+/);
-
    let mi=-1;
    for(let i=0;i<Math.min(parts.length,6);i++){
      const t=parts[i].replace(/[^A-Z0-9]/g,"");
      if(/^[A-Z][A-Z0-9]{2,10}$/.test(t)){mi=i;break}
    }
    if(mi<0)continue;
-
    const meal=parts[mi].replace(/[^A-Z0-9]/g,"");
-   const nums=[...rest.matchAll(/(?:^|\s)(\d{1,4})(?=\s|$)/g)];
+   const nums=[...rest.matchAll(/(?:^|\s)[^\d\s]?(\d{1,4})[^\d\s]?(?=\s|$)/g)];
    if(!nums.length)continue;
    const quantity=Number(nums[nums.length-1][1]);
    if(!Number.isFinite(quantity))continue;
-
    let desc=parts.slice(mi+1).join(" ").replace(/\s+\d{1,4}\s*$/,"").trim();
-
-   out.push({page,eascCode:easc,mealCode:meal,description:desc,quantity});
+   out.push({page,section,eascCode:easc,mealCode:meal,description:desc,quantity});
  }
  return out;
 }
 
-/*
-Run two OCR passes per image. Pass 1 is normal grayscale,
-pass 2 is high-contrast. Merge by EASC+meal code. This
-substantially improves small table rows and reduces the
-chance that a single OCR pass drops 2-3 rows.
-*/
 async function ocrPage(file,page){
  const w=await getWorker();
  const all=[];
- for(const variant of [0,1,2]){
-   const canvas=await imageCanvas(file,variant);
-   await w.setParameters({
-     tessedit_pageseg_mode: variant===2 ? Tesseract.PSM.SPARSE_TEXT : Tesseract.PSM.SINGLE_BLOCK,
-     preserve_interword_spaces:"1"
-   });
+ const passes=[
+   {variant:0,psm:Tesseract.PSM.SINGLE_BLOCK,label:"standard"},
+   {variant:1,psm:Tesseract.PSM.SINGLE_COLUMN,label:"column"},
+   {variant:2,psm:Tesseract.PSM.SPARSE_TEXT,label:"sparse"}
+ ];
+ for(const pass of passes){
+   const canvas=await imageCanvas(file,pass.variant);
+   await w.setParameters({tessedit_pageseg_mode:pass.psm,preserve_interword_spaces:"1",user_defined_dpi:"300"});
    const r=await w.recognize(canvas);
    const got=parseText(r.data.text,page);
    all.push(...got);
-   log(`Page ${page}: OCR pass ${variant+1} found ${got.length} row candidates.`);
+   log(`Page ${page}: OCR ${pass.label} found ${got.length} row candidates.`);
  }
+
+ /*
+   CRITICAL DUPLICATE FIX:
+   OCR can see the same printed row in multiple passes. The
+   report's stable row identity is SECTION + EASC CODE, not
+   OCR pass + EASC + meal code. This prevents duplicate rows.
+ */
  const map=new Map();
  for(const r of all){
-   const key=r.page+"|"+r.eascCode+"|"+r.mealCode;
-   if(!map.has(key) || map.get(key).description.length<r.description.length)map.set(key,r);
+   const key=[r.page,r.section,r.eascCode].join("|");
+   const existing=map.get(key);
+   if(!existing){map.set(key,r);continue;}
+   const score=x => (x.mealCode?10:0)+(x.quantity>=0?5:0)+Math.min(20,(x.description||"").length);
+   if(score(r)>score(existing))map.set(key,r);
  }
+
  return [...map.values()];
 }
 
