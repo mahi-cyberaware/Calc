@@ -1,18 +1,848 @@
-<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>Buy Online Report Counter</title><style>
-body{font-family:Arial;margin:0;background:#f4f6f9;color:#172033}main{max-width:760px;margin:auto;padding:16px}.card{background:#fff;padding:16px;margin:12px 0;border-radius:14px;border:1px solid #ddd}.upload{display:block;padding:30px;text-align:center;border:2px dashed #98a2b3;border-radius:12px;cursor:pointer}input[type=file]{display:none}.pre{display:flex;gap:8px;overflow:auto;margin-top:10px}.pre img{width:110px;height:85px;object-fit:cover;border-radius:8px}.btn{padding:11px 15px;border:0;border-radius:9px;font-weight:bold;margin:8px 5px 0 0}.go{background:#2563eb;color:#fff}.muted{color:#667085;font-size:13px}.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.r{padding:12px;border:1px solid #ddd;border-radius:9px}.r b{display:block;font-size:28px;margin-top:3px}.log{background:#101828;color:#fff;padding:10px;border-radius:8px;white-space:pre-wrap;font:12px monospace}.bar{height:6px;background:#eee;margin-top:8px}.bar i{display:block;width:0;height:100%;background:#2563eb}@media(min-width:600px){.grid{grid-template-columns:repeat(3,1fr)}}</style></head><body><main>
-<div class="card"><h2>🍽️ Buy Online Report Counter</h2><p class="muted">Upload report photos and calculate the six operational counts.</p></div>
-<div class="card"><label class="upload" for="files"><b>📷 Upload Report Image(s)</b><br><span class="muted">Take a photo or choose from Photos/Files.</span></label><input id="files" type="file" accept="image/*" multiple><div id="pre" class="pre"></div><p id="status" class="muted">No images selected.</p><div class="bar"><i id="prog"></i></div><button id="go" class="btn go" disabled>Calculate</button><button id="clear" class="btn">Clear</button></div>
-<div class="card"><h3>Final Count</h3><div class="grid"><div class="r"><span>Total</span><b id="total">0</b></div><div class="r"><span>Water</span><b id="water">0</b></div><div class="r"><span>Yoghurt</span><b id="yogurt">0</b></div><div class="r"><span>Coffee</span><b id="coffee">0</b></div><div class="r"><span>Paper Tray / Plate</span><b id="tray">0</b></div><div class="r"><span>Cutlery</span><b id="cutlery">0</b></div></div><button id="copy" class="btn">Copy Result</button></div>
-<div class="card"><h3>Detected Rows</h3><div id="rows" class="muted">Nothing detected yet.</div></div>
-<div class="card"><h3>Activity</h3><div id="log" class="log">Waiting for upload…</div></div>
-</main><script>
-let files=[],rows=[];const $=x=>document.getElementById(x);
-const HOT=new Set(["BUTERC","CPASTA","CBY","RAJMA","CNOODL","CONTIBF","CHANA","JAINVG","CPOP","EGGPIE"]),YOG=new Set(["VBY","CBY"]),WEX=new Set(["KIDSML","WATER"]),COF=new Set(["CONTIBF"]);
-function log(x){$("log").textContent+="\n"+x}
-function render(){let h=rows.length?'<table style="width:100%;font-size:12px"><tr><th>Page</th><th>Meal</th><th>Qty</th></tr>'+rows.map((r,i)=>`<tr><td>${r.page}</td><td>${r.mealCode}</td><td><input data-i="${i}" type="number" value="${r.quantity}" style="width:60px"></td></tr>`).join("")+'</table>':'Nothing detected yet.';$("rows").innerHTML=h;document.querySelectorAll("[data-i]").forEach(e=>e.onchange=()=>{rows[+e.dataset.i].quantity=+e.value||0;calc()})}
-function calc(){let t=0,w=0,y=0,c=0,h=0;rows.forEach(r=>{let q=+r.quantity||0;t+=q;if(!WEX.has(r.mealCode))w+=q;if(YOG.has(r.mealCode))y+=q;if(COF.has(r.mealCode))c+=q;if(HOT.has(r.mealCode))h+=q});$("total").textContent=t;$("water").textContent=w;$("yogurt").textContent=y;$("coffee").textContent=c;$("tray").textContent=h;$("cutlery").textContent=h}
-$("files").onchange=e=>{files=[...e.target.files];$("pre").innerHTML="";files.forEach(f=>{let i=document.createElement("img");i.src=URL.createObjectURL(f);$("pre").appendChild(i)});$("status").textContent=`${files.length} image(s) selected — ready.`;$("go").disabled=!files.length};
-$("go").onclick=async()=>{rows=[];render();$("log").textContent="Starting…";try{for(let i=0;i<files.length;i++){ $("status").textContent=`Processing ${i+1}/${files.length}…`;let fd=new FormData();fd.append("file",files[i],files[i].name);fd.append("page",i+1);let r=await fetch("/api/ocr",{method:"POST",body:fd}),j=await r.json();if(!r.ok)throw Error(j.error||"OCR failed");rows.push(...j.rows);log(`Page ${i+1}: ${j.rows.length} rows detected.`);render();calc();$("prog").style.width=((i+1)/files.length*100)+"%"}$("status").textContent=`Completed — ${rows.length} rows detected.`}catch(e){$("status").textContent="Failed: "+e.message;log("ERROR: "+e.message)}};
-$("copy").onclick=()=>{let s=`Total = ${$("total").textContent}\nWater = ${$("water").textContent}\nYoghurt = ${$("yogurt").textContent}\nCoffee = ${$("coffee").textContent}\nPaper Tray/Plate = ${$("tray").textContent}\nCutlery = ${$("cutlery").textContent}`;navigator.clipboard?.writeText(s);alert(s)};
-$("clear").onclick=()=>location.reload();
-</script></body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#2563eb">
+<title>Buy Online Report Counter</title>
+
+<!--
+NO OCR API / NO API KEY / NO BACKEND.
+Tesseract.js runs OCR in the browser.
+Internet is required to load Tesseract.js and its language data.
+-->
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#f3f5f8;color:#172033;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
+main{max-width:780px;margin:auto;padding:14px 12px 40px}
+.card{background:#fff;border:1px solid #dfe3e8;border-radius:16px;padding:16px;margin:12px 0;box-shadow:0 2px 10px rgba(16,24,40,.04)}
+h1{font-size:25px;margin:0 0 5px}
+h2{font-size:20px;margin:0 0 12px}
+.muted{color:#667085;font-size:13px;line-height:1.45}
+.upload{display:block;border:2px dashed #98a2b3;border-radius:14px;padding:30px 15px;text-align:center;background:#fafbfc;cursor:pointer}
+.upload:active{background:#eef4ff}
+#files{display:none}
+.previews{display:flex;gap:9px;overflow-x:auto;margin-top:12px}
+.thumb{width:110px;height:85px;object-fit:cover;border-radius:9px;border:1px solid #ddd;flex:0 0 auto}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+button{border:0;border-radius:10px;padding:12px 16px;font-weight:750;font-size:14px;cursor:pointer;margin-top:10px}
+.primary{background:#2563eb;color:#fff}
+.secondary{background:#eef2f6;color:#344054}
+button:disabled{opacity:.45}
+.status{margin-top:10px;font-size:13px}
+.progress{height:8px;background:#e9edf2;border-radius:20px;overflow:hidden;margin-top:9px}
+.progress i{display:block;width:0;height:100%;background:#2563eb;transition:.2s}
+.results{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}
+.result{border:1px solid #e1e5ea;border-radius:11px;padding:13px}
+.result span{display:block;color:#667085;font-size:12px}
+.result b{display:block;font-size:29px;margin-top:3px}
+.result.total{grid-column:1/-1;background:#f5f8ff;border-color:#9bb7ff}
+.result.total b{font-size:38px}
+.review{overflow:auto}
+table{border-collapse:collapse;width:100%;min-width:720px;font-size:11px}
+th,td{padding:7px;border-bottom:1px solid #eee;text-align:left;vertical-align:top}
+th{background:#f8fafc}
+.qty{width:65px;padding:6px;border:1px solid #cfd4dc;border-radius:6px}
+.log{background:#101828;color:#e6eaf0;border-radius:10px;padding:10px;min-height:60px;white-space:pre-wrap;font:11px ui-monospace,SFMono-Regular,Menlo,monospace}
+.warning{color:#b54708;font-weight:700}
+.ok{color:#067647;font-weight:700}
+.small{font-size:11px;color:#667085}
+details summary{cursor:pointer;font-weight:700}
+@media(min-width:650px){
+  .results{grid-template-columns:repeat(3,1fr)}
+  .result.total{grid-column:auto}
+}
+</style>
+</head>
+
+<body>
+<main>
+
+<section class="card">
+  <h1>🍽️ Buy Online Report Counter</h1>
+  <p class="muted">
+    Browser-only OCR. No OCR.Space, no API key and no backend.
+    Upload your Buy Online Report photo(s), then calculate.
+  </p>
+</section>
+
+<section class="card">
+  <label class="upload" for="files">
+    <b>📷 Upload Report Image(s)</b><br>
+    <span class="muted">Take a photo or select images from Photos / Files.</span>
+  </label>
+  <input id="files" type="file" accept="image/*" multiple>
+
+  <div id="previews" class="previews"></div>
+
+  <div id="status" class="status">No images selected.</div>
+  <div class="progress"><i id="progress"></i></div>
+
+  <div class="actions">
+    <button id="calculate" class="primary" disabled>Calculate</button>
+    <button id="clear" class="secondary">Clear</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>Final Count</h2>
+  <div class="results">
+    <div class="result total"><span>Total</span><b id="total">0</b></div>
+    <div class="result"><span>Water</span><b id="water">0</b></div>
+    <div class="result"><span>Yoghurt</span><b id="yoghurt">0</b></div>
+    <div class="result"><span>Coffee</span><b id="coffee">0</b></div>
+    <div class="result"><span>Paper Tray / Plate</span><b id="tray">0</b></div>
+    <div class="result"><span>Cutlery</span><b id="cutlery">0</b></div>
+  </div>
+
+  <button id="copy" class="secondary">Copy Result</button>
+</section>
+
+<section class="card">
+  <h2>Detected Rows</h2>
+  <p class="muted">
+    OCR rows are shown here before you use the final count.
+    You can correct any quantity and the totals update.
+  </p>
+  <div id="review" class="review">
+    <span class="muted">Nothing detected yet.</span>
+  </div>
+</section>
+
+<section class="card">
+  <details>
+    <summary>Calculation Rules</summary>
+    <p class="small">
+      Total = all detected report meal quantities.<br>
+      Water = Total − KIDSML − standalone WATER 500ml rows.<br>
+      Yoghurt = yoghurt meal rows such as VBY, CBY and GYOG.<br>
+      Coffee = coffee meal rows such as CONTIBF.<br>
+      Tray/Plate and Cutlery = hot-meal rows.
+    </p>
+  </details>
+</section>
+
+<section class="card">
+  <h2>Activity</h2>
+  <div id="log" class="log">Waiting for upload…</div>
+</section>
+
+</main>
+
+<script>
+/*
+=========================================================
+BUY ONLINE REPORT COUNTER — BROWSER OCR
+=========================================================
+
+No OCR API.
+No API key.
+No backend.
+
+Important design:
+We DO NOT maintain a whitelist of every meal code.
+
+The report has:
+EASC CODE | MEAL CODE | DESCRIPTION | QUANTITY
+
+The parser identifies a row from the EASC code and then
+takes the next suitable token as the meal code and the
+rightmost suitable quantity.
+
+Business classifications are based on the report code
+and description, not on requiring every possible meal
+code to be listed.
+=========================================================
+*/
+
+let selectedFiles = [];
+let rows = [];
+let worker = null;
+
+const $ = id => document.getElementById(id);
+
+const HOT_CODES = new Set([
+  "BUTERC","CPASTA","RAJMA","CNOODL","CHANA","JAINVG","CPOP",
+  "EGGPIE","CONTIBF"
+]);
+
+const YOGHURT_CODES = new Set([
+  "VBY","CBY","GYOG"
+]);
+
+const COFFEE_CODES = new Set([
+  "CONTIBF"
+]);
+
+const WATER_EXCLUDE_CODES = new Set([
+  "KIDSML","WATER"
+]);
+
+function log(message){
+  $("log").textContent += "\n" + message;
+  $("log").scrollTop = $("log").scrollHeight;
+}
+
+function clean(s){
+  return String(s || "")
+    .replace(/\|/g," ")
+    .replace(/[ \t]+/g," ")
+    .trim();
+}
+
+function upper(s){
+  return clean(s).toUpperCase();
+}
+
+/* ---------- Image preview ---------- */
+
+$("files").addEventListener("change", e => {
+  selectedFiles = [...e.target.files];
+  $("previews").innerHTML = "";
+
+  selectedFiles.forEach(file => {
+    const img = document.createElement("img");
+    img.className = "thumb";
+    img.src = URL.createObjectURL(file);
+    img.alt = file.name;
+    $("previews").appendChild(img);
+  });
+
+  $("calculate").disabled = !selectedFiles.length;
+
+  $("status").textContent = selectedFiles.length
+    ? `${selectedFiles.length} image(s) selected — ready to calculate.`
+    : "No images selected.";
+});
+
+/* ---------- Image preprocessing ---------- */
+
+async function prepareImage(file){
+  const bitmap = await createImageBitmap(file);
+
+  /*
+    Keep enough resolution for small printed text.
+    Large phone photos are resized to a practical OCR width.
+  */
+  const maxWidth = 2600;
+  const scale = Math.min(1, maxWidth / bitmap.width);
+
+  const width = Math.round(bitmap.width * scale);
+  const height = Math.round(bitmap.height * scale);
+
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+
+  const ctx = canvas.getContext("2d", {willReadFrequently:true});
+
+  ctx.drawImage(bitmap,0,0,width,height);
+
+  /*
+    Light grayscale + contrast enhancement.
+    This helps printed report text without destroying
+    the table structure.
+  */
+  const image = ctx.getImageData(0,0,width,height);
+  const d = image.data;
+
+  for(let i=0;i<d.length;i+=4){
+    const gray =
+      0.299*d[i] +
+      0.587*d[i+1] +
+      0.114*d[i+2];
+
+    const contrast =
+      ((gray - 128) * 1.18) + 128;
+
+    const v = Math.max(0,Math.min(255,contrast));
+
+    d[i] = v;
+    d[i+1] = v;
+    d[i+2] = v;
+  }
+
+  ctx.putImageData(image,0,0);
+
+  return canvas;
+}
+
+/* ---------- OCR worker ---------- */
+
+async function getWorker(){
+
+  if(worker) return worker;
+
+  $("status").textContent =
+    "Loading browser OCR engine…";
+
+  worker = await Tesseract.createWorker(
+    "eng",
+    1,
+    {
+      logger: message => {
+        if(message.status){
+          const p =
+            message.progress
+              ? Math.round(message.progress * 100)
+              : 0;
+
+          $("status").textContent =
+            "OCR: " + message.status +
+            (p ? ` ${p}%` : "");
+        }
+      }
+    }
+  );
+
+  /*
+    PSM 6 = assume a uniform block of text.
+    This is usually more useful for photographed tables
+    than sparse-text mode.
+  */
+  await worker.setParameters({
+    tessedit_pageseg_mode:
+      Tesseract.PSM.SINGLE_BLOCK
+  });
+
+  return worker;
+}
+
+/* ---------- Generic row extraction ---------- */
+
+function parseOCRText(text,page){
+
+  const output = [];
+
+  const lines =
+    String(text || "")
+      .split(/\r?\n/)
+      .map(clean)
+      .filter(Boolean);
+
+  /*
+    EASC codes are the most stable row anchor in this
+    report format.
+
+    Example:
+    T3L4S075 ZINGER ... 26
+  */
+
+  for(const lineRaw of lines){
+
+    const line = upper(lineRaw);
+
+    const eascMatch =
+      line.match(/\bT3L4[A-Z0-9]+\b/);
+
+    if(!eascMatch) continue;
+
+    const eascCode =
+      eascMatch[0];
+
+    const start =
+      (eascMatch.index || 0) +
+      eascMatch[0].length;
+
+    const rest =
+      line.slice(start).trim();
+
+    if(!rest) continue;
+
+    const tokens =
+      rest.split(/\s+/);
+
+    /*
+      The first clean alphanumeric token after EASC
+      is normally the Meal Code.
+    */
+    let mealIndex = -1;
+
+    for(let i=0;i<Math.min(tokens.length,5);i++){
+
+      const token =
+        tokens[i]
+          .replace(/[^A-Z0-9]/g,"");
+
+      /*
+        Meal codes in the reports are normally 3-10
+        alphanumeric characters.
+      */
+      if(
+        /^[A-Z][A-Z0-9]{2,9}$/.test(token)
+      ){
+        mealIndex = i;
+        break;
+      }
+    }
+
+    if(mealIndex < 0) continue;
+
+    const mealCode =
+      tokens[mealIndex]
+        .replace(/[^A-Z0-9]/g,"");
+
+    /*
+      Quantity is the final standalone integer on
+      the row.
+    */
+    const numbers =
+      [...rest.matchAll(
+        /(?:^|\s)(\d{1,4})(?=\s|$)/g
+      )];
+
+    if(!numbers.length) continue;
+
+    const quantity =
+      Number(
+        numbers[numbers.length - 1][1]
+      );
+
+    if(!Number.isFinite(quantity)) continue;
+
+    let description =
+      tokens
+        .slice(mealIndex + 1)
+        .join(" ");
+
+    description =
+      description
+        .replace(/\s+\d{1,4}\s*$/,"")
+        .trim();
+
+    output.push({
+      page,
+      eascCode,
+      mealCode,
+      description,
+      quantity,
+      confidence: "OCR"
+    });
+  }
+
+  /*
+    Remove exact duplicates caused by OCR.
+  */
+  const seen = new Set();
+
+  return output.filter(row => {
+
+    const key =
+      [
+        row.page,
+        row.eascCode,
+        row.mealCode,
+        row.quantity
+      ].join("|");
+
+    if(seen.has(key)) return false;
+
+    seen.add(key);
+    return true;
+  });
+}
+
+/* ---------- Description-based classification ---------- */
+
+function isYoghurt(row){
+
+  if(YOGHURT_CODES.has(row.mealCode))
+    return true;
+
+  const d = upper(row.description);
+
+  return (
+    d.includes("YOGHURT") ||
+    d.includes("YOGURT")
+  );
+}
+
+function isCoffee(row){
+
+  if(COFFEE_CODES.has(row.mealCode))
+    return true;
+
+  const d = upper(row.description);
+
+  return (
+    d.includes("COFFEE") &&
+    !d.includes("COFFEE FLAVOUR")
+  );
+}
+
+function isStandaloneWater(row){
+
+  if(row.mealCode === "WATER")
+    return true;
+
+  const d = upper(row.description);
+
+  return (
+    d.includes("MINERAL WATER") &&
+    d.includes("500 ML")
+  );
+}
+
+function isKids(row){
+
+  return (
+    row.mealCode === "KIDSML" ||
+    upper(row.description).includes("KIDS SNACK BOX")
+  );
+}
+
+function isHotMeal(row){
+
+  /*
+    Explicit known hot meal codes.
+  */
+  if(HOT_CODES.has(row.mealCode))
+    return true;
+
+  const d = upper(row.description);
+
+  /*
+    Description fallback.
+    This allows NEW meal codes to work without adding
+    them manually when the report description clearly
+    indicates a hot meal / tray / cutlery item.
+  */
+  const hotWords = [
+    "HOT",
+    "BUTTER CHICKEN",
+    "CHICKEN ALFREDO",
+    "BIRYANI",
+    "RAJMA WITH",
+    "CHICKEN NOODLES",
+    "CHICKEN POPCORN",
+    "CHICKEN POPCORN WITH",
+    "CHANA MASALA",
+    "JAIN MEAL",
+    "CONTINENTAL BREAKFAST",
+    "EGG PRE-",
+    "EGG PIE"
+  ];
+
+  if(
+    hotWords.some(word => d.includes(word))
+  ){
+    return true;
+  }
+
+  /*
+    Paper boat + cutlery is a strong signal that
+    the row belongs to the hot-meal/tray workflow.
+  */
+  if(
+    d.includes("PAPER BOAT") &&
+    d.includes("CUTLERY")
+  ){
+    return true;
+  }
+
+  return false;
+}
+
+/* ---------- Calculation ---------- */
+
+function calculate(){
+
+  let total = 0;
+  let water = 0;
+  let yoghurt = 0;
+  let coffee = 0;
+  let hot = 0;
+
+  for(const row of rows){
+
+    const q =
+      Number(row.quantity) || 0;
+
+    total += q;
+
+    /*
+      Water:
+      Total - kids snack box - standalone 500ml water.
+    */
+    if(
+      !isKids(row) &&
+      !isStandaloneWater(row)
+    ){
+      water += q;
+    }
+
+    if(isYoghurt(row))
+      yoghurt += q;
+
+    if(isCoffee(row))
+      coffee += q;
+
+    if(isHotMeal(row))
+      hot += q;
+  }
+
+  $("total").textContent = total;
+  $("water").textContent = water;
+  $("yoghurt").textContent = yoghurt;
+  $("coffee").textContent = coffee;
+  $("tray").textContent = hot;
+  $("cutlery").textContent = hot;
+}
+
+/* ---------- Review table ---------- */
+
+function renderRows(){
+
+  if(!rows.length){
+
+    $("review").innerHTML =
+      '<span class="muted">No rows detected yet.</span>';
+
+    return;
+  }
+
+  let html = `
+    <table>
+      <thead>
+        <tr>
+          <th>Page</th>
+          <th>EASC</th>
+          <th>Meal Code</th>
+          <th>Description</th>
+          <th>Qty</th>
+          <th>Class</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
+
+  rows.forEach((row,index) => {
+
+    let cls = [];
+
+    if(isYoghurt(row)) cls.push("Yoghurt");
+    if(isCoffee(row)) cls.push("Coffee");
+    if(isHotMeal(row)) cls.push("Hot");
+    if(isKids(row)) cls.push("Kids");
+    if(isStandaloneWater(row)) cls.push("Water");
+
+    html += `
+      <tr>
+        <td>${row.page}</td>
+        <td>${row.eascCode}</td>
+        <td>${row.mealCode}</td>
+        <td>${row.description || ""}</td>
+        <td>
+          <input
+            class="qty"
+            type="number"
+            min="0"
+            data-index="${index}"
+            value="${row.quantity}"
+          >
+        </td>
+        <td>${cls.join(", ") || "Normal"}</td>
+      </tr>
+    `;
+  });
+
+  html += "</tbody></table>";
+
+  $("review").innerHTML = html;
+
+  document
+    .querySelectorAll(".qty")
+    .forEach(input => {
+
+      input.addEventListener("change",() => {
+
+        rows[
+          Number(input.dataset.index)
+        ].quantity =
+          Number(input.value) || 0;
+
+        calculate();
+        renderRows();
+      });
+    });
+}
+
+/* ---------- Process ---------- */
+
+$("calculate").addEventListener("click", async () => {
+
+  if(!selectedFiles.length)
+    return;
+
+  rows = [];
+  renderRows();
+  calculate();
+
+  $("log").textContent =
+    "Starting browser OCR…";
+
+  $("progress").style.width = "2%";
+
+  try{
+
+    const ocr = await getWorker();
+
+    for(let i=0;i<selectedFiles.length;i++){
+
+      const page =
+        i + 1;
+
+      $("status").textContent =
+        `Preparing page ${page} of ${selectedFiles.length}…`;
+
+      log(
+        `Page ${page}: preparing image`
+      );
+
+      const canvas =
+        await prepareImage(
+          selectedFiles[i]
+        );
+
+      $("status").textContent =
+        `Reading page ${page} of ${selectedFiles.length}…`;
+
+      const result =
+        await ocr.recognize(canvas);
+
+      const text =
+        result.data.text || "";
+
+      const detected =
+        parseOCRText(
+          text,
+          page
+        );
+
+      rows.push(...detected);
+
+      log(
+        `Page ${page}: ${detected.length} rows detected`
+      );
+
+      $("progress").style.width =
+        Math.round(
+          ((i + 1) /
+          selectedFiles.length) *
+          100
+        ) + "%";
+
+      renderRows();
+      calculate();
+    }
+
+    await ocr.terminate();
+    worker = null;
+
+    if(!rows.length){
+
+      $("status").innerHTML =
+        '<span class="warning">OCR completed, but no report rows were detected. Try a clearer photo.</span>';
+
+      log(
+        "No T3L4... report rows were found."
+      );
+
+      return;
+    }
+
+    $("status").innerHTML =
+      `<span class="ok">Completed.</span> ${rows.length} rows detected.`;
+
+    log(
+      "Calculation completed."
+    );
+
+  }catch(error){
+
+    console.error(error);
+
+    $("status").innerHTML =
+      `<span class="warning">Failed: ${error.message}</span>`;
+
+    log(
+      "ERROR: " + error.message
+    );
+
+    if(worker){
+
+      try{
+        await worker.terminate();
+      }catch(_){}
+      worker = null;
+    }
+  }
+});
+
+/* ---------- Copy ---------- */
+
+$("copy").addEventListener("click", async () => {
+
+  const text =
+`Total = ${$("total").textContent}
+Water = ${$("water").textContent}
+Yoghurt = ${$("yoghurt").textContent}
+Coffee = ${$("coffee").textContent}
+Paper Tray/Plate = ${$("tray").textContent}
+Cutlery = ${$("cutlery").textContent}`;
+
+  try{
+
+    await navigator.clipboard.writeText(text);
+
+    $("status").textContent =
+      "Result copied.";
+
+  }catch{
+
+    prompt(
+      "Copy the result:",
+      text
+    );
+  }
+});
+
+/* ---------- Clear ---------- */
+
+$("clear").addEventListener("click", () => {
+
+  selectedFiles = [];
+  rows = [];
+
+  $("files").value = "";
+  $("previews").innerHTML = "";
+
+  $("calculate").disabled = true;
+
+  $("status").textContent =
+    "No images selected.";
+
+  $("progress").style.width = "0%";
+
+  $("log").textContent =
+    "Waiting for upload…";
+
+  [
+    "total",
+    "water",
+    "yoghurt",
+    "coffee",
+    "tray",
+    "cutlery"
+  ].forEach(id => {
+    $(id).textContent = "0";
+  });
+
+  renderRows();
+});
+
+</script>
+</body>
+</html>
