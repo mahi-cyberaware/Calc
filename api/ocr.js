@@ -1,6 +1,5 @@
 // api/ocr.js
 module.exports = async (req, res) => {
-  // CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   if (req.method === 'OPTIONS') return res.status(200).end();
@@ -21,18 +20,17 @@ module.exports = async (req, res) => {
   }
 
   try {
-    // Ensure we have a clean base64 string (remove data URL prefix)
+    // Clean base64
     let base64Image = image;
     if (base64Image.includes(',')) {
       base64Image = base64Image.split(',')[1];
     }
     if (!base64Image) {
-      throw new Error('Invalid image data: could not extract base64');
+      throw new Error('Invalid image data');
     }
 
-    console.log('Sending request to OCR.space (image length: ' + base64Image.length + ')');
+    console.log('OCR: image length', base64Image.length);
 
-    // Build form data using native FormData (Node 18+)
     const formData = new FormData();
     formData.append('apikey', apiKey);
     formData.append('base64Image', base64Image);
@@ -48,11 +46,11 @@ module.exports = async (req, res) => {
     });
 
     const data = await response.json();
-    console.log('OCR.space response status:', response.status);
+    console.log('OCR.space status:', response.status);
 
     if (!data || data.IsErroredOnProcessing) {
       const errorMsg = data?.ErrorMessage || 'OCR processing failed';
-      console.error('OCR.space error:', errorMsg);
+      console.error('OCR error:', errorMsg);
       return res.status(500).json({ success: false, error: errorMsg });
     }
 
@@ -64,7 +62,6 @@ module.exports = async (req, res) => {
     }
 
     if (!fullText.trim()) {
-      console.warn('No text extracted from image');
       return res.status(200).json({
         success: false,
         error: 'No text detected in image. Please try a clearer photo.'
@@ -72,25 +69,18 @@ module.exports = async (req, res) => {
     }
 
     console.log('Extracted text length:', fullText.length);
-    console.log('First 300 chars:', fullText.substring(0, 300));
 
-    // Parse rows
     const rows = parseReportText(fullText);
-
     if (rows.length === 0) {
-      console.warn('No rows parsed from text');
       return res.status(200).json({
         success: false,
-        error: 'No rows could be parsed from the extracted text.',
-        rawText: fullText.substring(0, 300) // helpful for debugging
+        error: 'No rows could be parsed. Raw text snippet: ' + fullText.substring(0, 200)
       });
     }
 
-    console.log('Parsed rows:', rows.length);
     return res.status(200).json({ success: true, rows });
 
   } catch (error) {
-    // Catch any unexpected error (network, syntax, etc.)
     console.error('Unhandled error:', error);
     return res.status(500).json({
       success: false,
@@ -99,14 +89,11 @@ module.exports = async (req, res) => {
   }
 };
 
-/**
- * Parse report text into structured rows
- */
 function parseReportText(text) {
   const rows = [];
   const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
 
-  // Strategy 1: Split by 2+ spaces
+  // Strategy 1: split by 2+ spaces
   for (const line of lines) {
     const parts = line.split(/\s{2,}/).filter(p => p.length > 0);
     if (parts.length >= 3) {
@@ -124,7 +111,7 @@ function parseReportText(text) {
   }
   if (rows.length > 0) return deduplicate(rows);
 
-  // Strategy 2: Code + trailing number
+  // Strategy 2: code + trailing number
   for (const line of lines) {
     const codeMatch = line.match(/\b(T3L4\w+|T3L\w+|[A-Z]{2,6}\d*)\b/);
     const numMatch = line.match(/(\d+)$/);
@@ -140,7 +127,7 @@ function parseReportText(text) {
   }
   if (rows.length > 0) return deduplicate(rows);
 
-  // Strategy 3: Last resort – any number at the end
+  // Strategy 3: any number at the end
   for (const line of lines) {
     const numMatch = line.match(/(\d+)$/);
     if (numMatch) {
