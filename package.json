@@ -6,13 +6,11 @@
   "scripts": {
     "start": "vercel dev"
   },
-  "dependencies": {
-    "node-fetch": "^2.6.7"
-  },
+  "dependencies": {},
   "devDependencies": {
     "@vercel/node": "^2.9.0"
   },
   "engines": {
-    "node": ">=16.x"
+    "node": ">=18.x"
   }
 }
