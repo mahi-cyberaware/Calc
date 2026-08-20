@@ -8,7 +8,6 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet" />
   <style>
-    /* (same as previous – omitted for brevity) */
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: #f5f7fa; }
     body { min-height: 100vh; display: flex; justify-content: center; padding: 16px; background: #f5f7fa; }
@@ -89,7 +88,8 @@
     <span class="icon">📷</span>
     <div class="label">Upload Report Image</div>
     <div class="hint">Tap to take photo or select from gallery</div>
-    <input type="file" id="fileInput" accept="image/*" multiple capture="environment" />
+    <!-- FIX: removed capture="environment" so both camera & gallery are available -->
+    <input type="file" id="fileInput" accept="image/*" multiple />
   </div>
 
   <div class="preview-grid" id="previewGrid"></div>
