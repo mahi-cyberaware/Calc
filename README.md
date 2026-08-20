@@ -1,59 +1,22 @@
-# Buy Online Report Counter — NO OCR API
+# Buy Online Report Counter v2 — Browser OCR only
 
-This version does NOT use OCR.Space.
+No OCR.Space. No API key. No backend.
 
-It uses Tesseract.js directly in the browser.
+## Business rules
+- Yoghurt: ONLY VBY + CBY. GYOG is excluded.
+- Water: Total minus KIDSML and standalone 500ml WATER.
+- Coffee: CONTIBF.
+- Paper Tray/Plate and Cutlery: ONLY configured hot meal codes.
+- Sandwich/SW codes are excluded from tray/cutlery.
+- GYOG, MINIDO, FRUITS are excluded from tray/cutlery.
+- HALOUM is excluded even though its description contains the word HOT.
 
-## Important
+Hot meal codes configured from the supplied reports:
+BUTERC, RAJMA, CPASTA, CBY, CHANA, CNOODL, CPOP, JAINVG, CONTIBF, EGGPIE.
 
-There is:
-- no OCR API key
-- no server
-- no backend
-- no OCR.Space account
+The parser itself is not limited to these codes: new meal codes are still detected as normal rows. The hot-meal classification is deliberately restricted to the operational rules above.
 
-The browser downloads Tesseract.js and English language data from jsDelivr the first time it is used.
+## Deploy
+Upload `index.html` to the existing `calc` GitHub repository and let Vercel redeploy. No environment variables are required.
 
-An internet connection is therefore required when the OCR library/language data is not already cached.
-
-## GitHub / Vercel
-
-This can be deployed as a static site.
-
-Put `index.html` in the GitHub repository `calc`.
-
-No environment variables are required.
-
-Vercel can deploy it as a normal static site.
-
-## Daily workflow
-
-1. Open your Vercel URL on iPhone.
-2. Upload one or more Buy Online Report photos.
-3. Confirm the thumbnails appear.
-4. Tap Calculate.
-5. Browser OCR reads the report.
-6. Review detected rows if necessary.
-7. Copy the six final counts.
-
-## Business logic
-
-Total:
-sum of all detected report rows.
-
-Water:
-Total minus KIDSML and standalone 500ml WATER rows.
-
-Yoghurt:
-yoghurt rows are detected by known codes and by descriptions containing YOGHURT/YOGURT.
-
-Coffee:
-coffee rows are detected by known codes and descriptions containing COFFEE.
-
-Paper Tray / Plate:
-hot-meal rows are detected using known hot-meal codes plus description-based rules.
-
-Cutlery:
-same hot-meal count.
-
-The meal-code parser is NOT limited to a fixed list of all possible meal codes. It reads the meal code from the report row after the EASC code.
+The browser downloads Tesseract.js from jsDelivr, so internet access is required.
