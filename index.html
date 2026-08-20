@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover" />
+  <title>Buy Online Report Counter</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet" />
+  <style>
+    /* (same as previous – omitted for brevity) */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: #f5f7fa; }
+    body { min-height: 100vh; display: flex; justify-content: center; padding: 16px; background: #f5f7fa; }
+    #app { max-width: 500px; width: 100%; background: #fff; border-radius: 28px; padding: 24px 20px 32px; box-shadow: 0 10px 40px rgba(0,0,0,0.06); }
+    h1 { font-size: 22px; font-weight: 700; display: flex; gap: 10px; margin-bottom: 6px; }
+    h1 span { background: #eef2ff; color: #4f46e5; font-size: 14px; padding: 2px 12px; border-radius: 100px; }
+    .subhead { font-size: 14px; color: #64748b; margin-bottom: 24px; }
+    .upload-zone { border: 2px dashed #d1d5db; border-radius: 20px; padding: 32px 16px; text-align: center; background: #fafbfc; cursor: pointer; position: relative; }
+    .upload-zone .icon { font-size: 44px; display: block; margin-bottom: 10px; }
+    .upload-zone .label { font-weight: 600; font-size: 17px; color: #0f172a; }
+    .upload-zone .hint { font-size: 13px; color: #94a3b8; margin-top: 6px; }
+    .upload-zone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+    .preview-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(90px,1fr)); gap: 10px; margin-top: 16px; }
+    .preview-item { position: relative; border-radius: 14px; overflow: hidden; aspect-ratio: 1/1; background: #f1f5f9; border: 1px solid #e9edf2; }
+    .preview-item img { width: 100%; height: 100%; object-fit: cover; }
+    .preview-item .badge { position: absolute; top: 6px; right: 6px; background: rgba(0,0,0,0.65); color: #fff; font-size: 11px; font-weight: 600; padding: 2px 10px; border-radius: 100px; }
+    .preview-item .remove-btn { position: absolute; bottom: 6px; right: 6px; background: rgba(239,68,68,0.85); color: #fff; border: none; width: 28px; height: 28px; border-radius: 50%; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-weight: 600; font-size: 16px; padding: 14px 24px; border-radius: 100px; border: none; cursor: pointer; width: 100%; font-family: inherit; transition: all 0.15s; }
+    .btn:active { transform: scale(0.97); }
+    .btn-primary { background: #4f46e5; color: #fff; box-shadow: 0 4px 14px rgba(79,70,229,0.30); }
+    .btn-primary:disabled { opacity: 0.5; pointer-events: none; }
+    .btn-secondary { background: #f1f5f9; color: #1e293b; }
+    .btn-success { background: #059669; color: #fff; }
+    .btn-danger { background: #ef4444; color: #fff; }
+    .btn-group { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+    .btn-group .btn { flex: 1; min-width: 100px; }
+    .status-box { margin-top: 16px; padding: 14px 18px; border-radius: 14px; background: #f8fafc; border: 1px solid #e9edf2; font-size: 14px; color: #334155; display: flex; align-items: center; gap: 12px; min-height: 56px; }
+    .status-box .spinner { width: 24px; height: 24px; border: 3px solid #e2e8f0; border-top-color: #4f46e5; border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .status-box .msg { flex: 1; word-break: break-word; }
+    .status-box.done { background: #ecfdf5; border-color: #a7f3d0; }
+    .status-box.error { background: #fef2f2; border-color: #fca5a5; color: #991b1b; }
+    .status-box.warn { background: #fffbeb; border-color: #fcd34d; color: #92400e; }
+    .progress-wrap { margin-top: 12px; background: #e9edf2; border-radius: 100px; height: 6px; overflow: hidden; }
+    .progress-wrap .bar { height: 100%; width: 0%; background: #4f46e5; border-radius: 100px; transition: width 0.3s ease; }
+    .review-section { margin-top: 20px; border-top: 1px solid #e9edf2; padding-top: 20px; }
+    .review-section h3 { font-size: 16px; font-weight: 600; margin-bottom: 12px; }
+    .review-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .review-table { width: 100%; min-width: 440px; border-collapse: collapse; font-size: 13px; }
+    .review-table th { text-align: left; padding: 8px 8px 8px 0; font-weight: 600; color: #475569; border-bottom: 2px solid #e2e8f0; font-size: 11px; text-transform: uppercase; }
+    .review-table td { padding: 8px 8px 8px 0; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+    .review-table .qty-input { width: 56px; padding: 4px 6px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; font-weight: 600; text-align: center; background: #fff; font-family: inherit; }
+    .review-table .qty-input:focus { outline: 2px solid #4f46e5; outline-offset: 1px; border-color: transparent; }
+    .review-table .conf-badge { display: inline-block; font-size: 10px; font-weight: 600; padding: 2px 10px; border-radius: 100px; text-transform: uppercase; }
+    .conf-badge.high { background: #d1fae5; color: #065f46; }
+    .conf-badge.medium { background: #fef3c7; color: #92400e; }
+    .conf-badge.low { background: #fee2e2; color: #991b1b; }
+    .review-table .meal-code { font-weight: 600; color: #0f172a; font-size: 12px; white-space: nowrap; }
+    .review-table .desc { color: #475569; font-size: 12px; max-width: 120px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .results { margin-top: 20px; border-top: 1px solid #e9edf2; padding-top: 20px; }
+    .results .result-row { display: flex; justify-content: space-between; align-items: baseline; padding: 10px 0; border-bottom: 1px solid #f1f5f9; }
+    .results .result-label { font-weight: 500; color: #475569; font-size: 15px; }
+    .results .result-value { font-weight: 700; font-size: 22px; color: #0f172a; }
+    .results .result-value.grand { font-size: 28px; color: #4f46e5; }
+    .breakdown { margin-top: 16px; background: #f8fafc; border-radius: 16px; padding: 14px 16px; border: 1px solid #e9edf2; }
+    .breakdown summary { font-weight: 600; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+    .breakdown summary::after { content: '▾'; font-size: 14px; color: #94a3b8; transition: transform 0.2s; }
+    .breakdown[open] summary::after { transform: rotate(180deg); }
+    .breakdown .page-item { padding: 10px 0; border-bottom: 1px solid #e9edf2; font-size: 13px; }
+    .breakdown .page-item:last-child { border-bottom: none; }
+    .breakdown .page-item .page-title { font-weight: 600; color: #0f172a; margin-bottom: 4px; }
+    .breakdown .page-item .page-stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px 12px; color: #475569; font-size: 12px; }
+    .breakdown .page-item .page-stats .num { font-weight: 600; color: #0f172a; }
+    .hidden { display: none !important; }
+    .mt-12 { margin-top: 12px; }
+    .mt-16 { margin-top: 16px; }
+    .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #0f172a; color: #fff; padding: 12px 24px; border-radius: 100px; font-weight: 500; font-size: 14px; box-shadow: 0 8px 30px rgba(0,0,0,0.20); z-index: 999; opacity: 0; transition: opacity 0.25s; pointer-events: none; white-space: nowrap; }
+    .toast.show { opacity: 1; }
+    @media (max-width: 400px) { #app { padding: 16px 14px 24px; } .results .result-value { font-size: 19px; } .results .result-value.grand { font-size: 24px; } .btn { font-size: 14px; padding: 12px 18px; } }
+  </style>
+</head>
+<body>
+<div id="app">
+  <h1>📊 Buy Online Report <span>Counter</span></h1>
+  <p class="subhead">Upload your report image(s) &amp; get instant totals</p>
+
+  <div class="upload-zone" id="uploadZone">
+    <span class="icon">📷</span>
+    <div class="label">Upload Report Image</div>
+    <div class="hint">Tap to take photo or select from gallery</div>
+    <input type="file" id="fileInput" accept="image/*" multiple capture="environment" />
+  </div>
+
+  <div class="preview-grid" id="previewGrid"></div>
+
+  <div class="status-box hidden" id="statusBox">
+    <div class="spinner" id="statusSpinner"></div>
+    <div class="msg" id="statusMsg">Ready</div>
+  </div>
+  <div class="progress-wrap hidden" id="progressWrap">
+    <div class="bar" id="progressBar" style="width:0%"></div>
+  </div>
+
+  <div class="btn-group mt-16" id="actionGroup">
+    <button class="btn btn-primary" id="calcBtn" disabled>🧮 Calculate</button>
+    <button class="btn btn-secondary" id="clearBtn">✕ Clear</button>
+  </div>
+
+  <div class="review-section hidden" id="reviewSection">
+    <h3>📋 Review Detected Rows</h3>
+    <p style="font-size:13px;color:#64748b;margin-bottom:10px;">Edit quantities if needed, then recalculate.</p>
+    <div class="review-table-wrap">
+      <table class="review-table" id="reviewTable">
+        <thead><tr><th>Page</th><th>Meal</th><th>Description</th><th>Qty</th><th>Conf</th></tr></thead>
+        <tbody id="reviewBody"></tbody>
+      </table>
+    </div>
+    <div class="scroll-hint" style="font-size:11px;color:#94a3b8;text-align:right;">← scroll →</div>
+    <button class="btn btn-primary mt-12" id="recalcBtn">🔄 Recalculate</button>
+  </div>
+
+  <div class="results hidden" id="resultsSection">
+    <h3 style="font-size:16px;font-weight:600;color:#0f172a;margin-bottom:8px;">📊 Final Count</h3>
+    <div class="result-row"><span class="result-label">TOTAL</span><span class="result-value grand" id="rTotal">0</span></div>
+    <div class="result-row"><span class="result-label">WATER</span><span class="result-value" id="rWater">0</span></div>
+    <div class="result-row"><span class="result-label">YOGHURT</span><span class="result-value" id="rYoghurt">0</span></div>
+    <div class="result-row"><span class="result-label">COFFEE</span><span class="result-value" id="rCoffee">0</span></div>
+    <div class="result-row"><span class="result-label">PAPER TRAY / PLATE</span><span class="result-value" id="rTray">0</span></div>
+    <div class="result-row"><span class="result-label">CUTLERY</span><span class="result-value" id="rCutlery">0</span></div>
+
+    <div class="btn-group mt-16">
+      <button class="btn btn-success" id="copyBtn">📋 Copy Result</button>
+      <button class="btn btn-secondary" id="clearResultsBtn">✕ Clear</button>
+    </div>
+
+    <details class="breakdown hidden" id="breakdownDetails">
+      <summary>Page-by-page breakdown</summary>
+      <div id="breakdownContent"></div>
+    </details>
+  </div>
+
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+  (function(){
+    const fileInput = document.getElementById('fileInput');
+    const uploadZone = document.getElementById('uploadZone');
+    const previewGrid = document.getElementById('previewGrid');
+    const statusBox = document.getElementById('statusBox');
+    const statusSpinner = document.getElementById('statusSpinner');
+    const statusMsg = document.getElementById('statusMsg');
+    const progressWrap = document.getElementById('progressWrap');
+    const progressBar = document.getElementById('progressBar');
+    const calcBtn = document.getElementById('calcBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const reviewSection = document.getElementById('reviewSection');
+    const reviewBody = document.getElementById('reviewBody');
+    const recalcBtn = document.getElementById('recalcBtn');
+    const resultsSection = document.getElementById('resultsSection');
+    const rTotal = document.getElementById('rTotal');
+    const rWater = document.getElementById('rWater');
+    const rYoghurt = document.getElementById('rYoghurt');
+    const rCoffee = document.getElementById('rCoffee');
+    const rTray = document.getElementById('rTray');
+    const rCutlery = document.getElementById('rCutlery');
+    const copyBtn = document.getElementById('copyBtn');
+    const clearResultsBtn = document.getElementById('clearResultsBtn');
+    const breakdownContent = document.getElementById('breakdownContent');
+    const breakdownDetails = document.getElementById('breakdownDetails');
+    const toast = document.getElementById('toast');
+
+    let allRows = [];
+    let pageResults = [];
+    let isProcessing = false;
+    const imageFiles = [];
+
+    const CONFIG = {
+      yoghurtCodes: ['VBY', 'CBY'],
+      coffeeCodes: ['CONTIBF'],
+      hotMealCodes: ['BUTERC','CPASTA','CBY','RAJMA','CNOODL','CONTIBF','CHANA','JAINVG','CPOP','EGGPIE'],
+      kidsmlCodes: ['KIDSML','T3L4X009','X009'],
+      standaloneWaterCodes: ['WATER','C3L2X038']
+    };
+
+    function showToast(msg, duration=2200) {
+      toast.textContent = msg;
+      toast.classList.add('show');
+      clearTimeout(toast._hide);
+      toast._hide = setTimeout(() => toast.classList.remove('show'), duration);
+    }
+
+    function setStatus(msg, type, showSpinner) {
+      statusBox.classList.remove('hidden','done','error','warn');
+      if (type==='done') statusBox.classList.add('done');
+      else if (type==='error') statusBox.classList.add('error');
+      else if (type==='warn') statusBox.classList.add('warn');
+      statusMsg.innerHTML = msg;
+      statusSpinner.style.display = showSpinner ? 'block' : 'none';
+    }
+
+    function setProgress(pct) {
+      progressWrap.classList.remove('hidden');
+      progressBar.style.width = Math.min(100, Math.max(0, pct)) + '%';
+      if (pct>=100) setTimeout(() => progressWrap.classList.add('hidden'), 400);
+    }
+
+    function hideStatus() { statusBox.classList.add('hidden'); progressWrap.classList.add('hidden'); }
+
+    function renderPreviews() {
+      previewGrid.innerHTML = '';
+      imageFiles.forEach((f, idx) => {
+        const div = document.createElement('div');
+        div.className = 'preview-item';
+        const img = document.createElement('img');
+        img.src = URL.createObjectURL(f);
+        img.alt = f.name;
+        div.appendChild(img);
+        const badge = document.createElement('span');
+        badge.className = 'badge';
+        badge.textContent = idx+1;
+        div.appendChild(badge);
+        const rm = document.createElement('button');
+        rm.className = 'remove-btn';
+        rm.textContent = '✕';
+        rm.setAttribute('aria-label','Remove image');
+        rm.addEventListener('click', (e) => {
+          e.stopPropagation();
+          imageFiles.splice(idx,1);
+          renderPreviews();
+          updateCalcButton();
+          if (imageFiles.length===0) { hideStatus(); reviewSection.classList.add('hidden'); resultsSection.classList.add('hidden'); }
+          else setStatus(imageFiles.length+' image(s) selected — ready to process','done',false);
+        });
+        div.appendChild(rm);
+        previewGrid.appendChild(div);
+      });
+      if (imageFiles.length===0) previewGrid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#94a3b8;font-size:13px;padding:8px 0;">No images selected</div>';
+    }
+
+    function updateCalcButton() { calcBtn.disabled = (imageFiles.length===0 || isProcessing); }
+
+    fileInput.addEventListener('change', function(e) {
+      const files = Array.from(e.target.files || []);
+      if (files.length===0) return;
+      let added=0;
+      files.forEach(f => {
+        const dup = imageFiles.some(ex => ex.name===f.name && ex.size===f.size);
+        if (!dup) { imageFiles.push(f); added++; }
+      });
+      if (added>0) {
+        renderPreviews();
+        setStatus(added+' image(s) added. Total: '+imageFiles.length+' selected.','done',false);
+        updateCalcButton();
+        setTimeout(() => handleCalculate(), 300);
+      } else showToast('No new images added (duplicates skipped)');
+      fileInput.value = '';
+    });
+
+    uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('dragover'); });
+    uploadZone.addEventListener('dragleave', e => { e.preventDefault(); uploadZone.classList.remove('dragover'); });
+    uploadZone.addEventListener('drop', function(e) {
+      e.preventDefault();
+      uploadZone.classList.remove('dragover');
+      const files = Array.from(e.dataTransfer.files || []);
+      if (files.length===0) return;
+      let added=0;
+      files.forEach(f => {
+        if (f.type.startsWith('image/')) {
+          const dup = imageFiles.some(ex => ex.name===f.name && ex.size===f.size);
+          if (!dup) { imageFiles.push(f); added++; }
+        }
+      });
+      if (added>0) {
+        renderPreviews();
+        setStatus(added+' image(s) added. Total: '+imageFiles.length+' selected.','done',false);
+        updateCalcButton();
+        setTimeout(() => handleCalculate(), 300);
+      } else showToast('No valid images dropped');
+    });
+
+    clearBtn.addEventListener('click', function() {
+      imageFiles.length = 0;
+      renderPreviews();
+      allRows = [];
+      pageResults = [];
+      reviewSection.classList.add('hidden');
+      resultsSection.classList.add('hidden');
+      hideStatus();
+      updateCalcButton();
+      showToast('Cleared all data');
+    });
+
+    clearResultsBtn.addEventListener('click', function() {
+      allRows = [];
+      pageResults = [];
+      reviewSection.classList.add('hidden');
+      resultsSection.classList.add('hidden');
+      hideStatus();
+      showToast('Cleared results');
+    });
+
+    copyBtn.addEventListener('click', function() {
+      const text = 'Total = ' + rTotal.textContent.trim() +
+        '\nWater = ' + rWater.textContent.trim() +
+        '\nYoghurt = ' + rYoghurt.textContent.trim() +
+        '\nCoffee = ' + rCoffee.textContent.trim() +
+        '\nPaper Tray/Plate = ' + rTray.textContent.trim() +
+        '\nCutlery = ' + rCutlery.textContent.trim();
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => showToast('✅ Copied!')).catch(() => fallbackCopy(text));
+      } else fallbackCopy(text);
+    });
+
+    function fallbackCopy(text) {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed'; ta.style.left = '-9999px'; ta.style.top = '-9999px';
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy'); showToast('✅ Copied!'); } catch(e) { showToast('⚠️ Could not copy.'); }
+      document.body.removeChild(ta);
+    }
+
+    recalcBtn.addEventListener('click', function() {
+      const inputs = reviewBody.querySelectorAll('.qty-input');
+      inputs.forEach((inp, idx) => {
+        const val = parseInt(inp.value, 10);
+        if (!isNaN(val) && val>=0 && idx<allRows.length) allRows[idx].quantity = val;
+      });
+      computeAndDisplay();
+      showToast('✅ Recalculated');
+    });
+
+    calcBtn.addEventListener('click', handleCalculate);
+
+    async function handleCalculate() {
+      if (isProcessing) return;
+      if (imageFiles.length===0) { showToast('Please select at least one image'); return; }
+      isProcessing = true;
+      calcBtn.disabled = true;
+      allRows = [];
+      pageResults = [];
+      reviewSection.classList.add('hidden');
+      resultsSection.classList.add('hidden');
+      setStatus('Preparing images…','',true);
+      setProgress(5);
+
+      try {
+        const totalImages = imageFiles.length;
+        for (let i=0; i<totalImages; i++) {
+          const file = imageFiles[i];
+          setStatus('Processing image '+(i+1)+' of '+totalImages+'…','',true);
+          setProgress(10 + (i/totalImages)*70);
+
+          const jpegBase64 = await imageToJpegBase64(file);
+          if (!jpegBase64) {
+            setStatus('⚠️ Could not process image '+(i+1)+'. Skipping.','warn',false);
+            continue;
+          }
+
+          const response = await fetch('/api/ocr', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ image: jpegBase64, page: i+1 })
+          });
+
+          let data;
+          try { data = await response.json(); } catch(e) {
+            setStatus('⚠️ Invalid response from server for image '+(i+1),'error',false);
+            continue;
+          }
+
+          if (!response.ok || !data.success) {
+            setStatus('⚠️ OCR failed for image '+(i+1)+': '+(data.error||'Unknown error'),'error',false);
+            continue;
+          }
+
+          const rows = data.rows || [];
+          if (rows.length===0) {
+            setStatus('⚠️ No rows detected in image '+(i+1),'warn',false);
+          } else {
+            rows.forEach(r => r.page = i+1);
+            allRows = allRows.concat(rows);
+          }
+          setProgress(10 + ((i+1)/totalImages)*70);
+        }
+
+        setProgress(85);
+        setStatus('Analyzing '+allRows.length+' rows…','',true);
+
+        if (allRows.length===0) {
+          setStatus('No rows detected in any image. Please upload clearer photos.','error',false);
+          setProgress(100);
+          isProcessing = false;
+          calcBtn.disabled = false;
+          return;
+        }
+
+        computeAndDisplay();
+        setProgress(100);
+        setStatus('✅ Done! '+allRows.length+' rows processed.','done',false);
+
+      } catch(err) {
+        console.error(err);
+        setStatus('❌ Error: '+(err.message||'Unexpected error'),'error',false);
+      } finally {
+        isProcessing = false;
+        calcBtn.disabled = false;
+      }
+    }
+
+    function computeAndDisplay() {
+      const pages = {};
+      allRows.forEach(row => {
+        const p = row.page || 1;
+        if (!pages[p]) pages[p] = [];
+        pages[p].push(row);
+      });
+
+      pageResults = [];
+      Object.keys(pages).sort((a,b)=>Number(a)-Number(b)).forEach(pageKey => {
+        const rows = pages[pageKey];
+        const result = computePageTotals(rows);
+        result.page = Number(pageKey);
+        result.rows = rows;
+        pageResults.push(result);
+      });
+
+      const grand = { total:0, water:0, yoghurt:0, coffee:0, tray:0, cutlery:0 };
+      pageResults.forEach(p => {
+        grand.total += p.total;
+        grand.water += p.water;
+        grand.yoghurt += p.yoghurt;
+        grand.coffee += p.coffee;
+        grand.tray += p.tray;
+        grand.cutlery += p.cutlery;
+      });
+
+      rTotal.textContent = grand.total;
+      rWater.textContent = grand.water;
+      rYoghurt.textContent = grand.yoghurt;
+      rCoffee.textContent = grand.coffee;
+      rTray.textContent = grand.tray;
+      rCutlery.textContent = grand.cutlery;
+      resultsSection.classList.remove('hidden');
+
+      buildReviewTable();
+      buildBreakdown();
+      resultsSection.scrollIntoView({ behavior:'smooth', block:'start' });
+    }
+
+    function computePageTotals(rows) {
+      let total=0, yoghurt=0, coffee=0, tray=0, kidsml=0, standaloneWater=0;
+      rows.forEach(row => {
+        const qty = row.quantity || 0;
+        const meal = (row.mealCode || '').toUpperCase().trim();
+        total += qty;
+        if (CONFIG.yoghurtCodes.indexOf(meal) !== -1) yoghurt += qty;
+        if (CONFIG.coffeeCodes.indexOf(meal) !== -1) coffee += qty;
+        if (CONFIG.hotMealCodes.indexOf(meal) !== -1) tray += qty;
+        if (CONFIG.kidsmlCodes.some(k => meal===k || meal.indexOf(k)!==-1)) kidsml += qty;
+        if (CONFIG.standaloneWaterCodes.some(k => meal===k || meal.indexOf(k)!==-1)) standaloneWater += qty;
+      });
+      const water = Math.max(0, total - kidsml - standaloneWater);
+      const cutlery = tray;
+      return { total, water, yoghurt, coffee, tray, cutlery };
+    }
+
+    function buildReviewTable() {
+      reviewSection.classList.remove('hidden');
+      reviewBody.innerHTML = '';
+      if (allRows.length===0) {
+        reviewBody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:#94a3b8;">No rows to review</td></tr>';
+        return;
+      }
+      allRows.forEach((row, idx) => {
+        const tr = document.createElement('tr');
+        const tdPage = document.createElement('td');
+        tdPage.textContent = row.page || 1;
+        tdPage.style.fontWeight = '500';
+        tr.appendChild(tdPage);
+        const tdMeal = document.createElement('td');
+        tdMeal.className = 'meal-code';
+        tdMeal.textContent = row.mealCode || '—';
+        tr.appendChild(tdMeal);
+        const tdDesc = document.createElement('td');
+        tdDesc.className = 'desc';
+        tdDesc.textContent = (row.description || '').substring(0, 40);
+        tdDesc.title = row.description || '';
+        tr.appendChild(tdDesc);
+        const tdQty = document.createElement('td');
+        const inp = document.createElement('input');
+        inp.type = 'number';
+        inp.min = 0;
+        inp.step = 1;
+        inp.className = 'qty-input';
+        inp.value = row.quantity || 0;
+        inp.addEventListener('change', function() {
+          const v = parseInt(this.value, 10);
+          if (!isNaN(v) && v>=0) {
+            row.quantity = v;
+            clearTimeout(inp._recalcTimer);
+            inp._recalcTimer = setTimeout(() => computeAndDisplay(), 500);
+          }
+        });
+        tdQty.appendChild(inp);
+        tr.appendChild(tdQty);
+        const tdConf = document.createElement('td');
+        const conf = row.confidence || 'medium';
+        const badge = document.createElement('span');
+        badge.className = 'conf-badge '+conf;
+        badge.textContent = conf;
+        tdConf.appendChild(badge);
+        tr.appendChild(tdConf);
+        reviewBody.appendChild(tr);
+      });
+    }
+
+    function buildBreakdown() {
+      if (pageResults.length<=1) { breakdownDetails.classList.add('hidden'); return; }
+      breakdownDetails.classList.remove('hidden');
+      breakdownContent.innerHTML = '';
+      pageResults.forEach(p => {
+        const div = document.createElement('div');
+        div.className = 'page-item';
+        const title = document.createElement('div');
+        title.className = 'page-title';
+        title.textContent = '📄 Page '+p.page+'  —  '+p.rows.length+' rows';
+        div.appendChild(title);
+        const stats = document.createElement('div');
+        stats.className = 'page-stats';
+        stats.innerHTML =
+          '<span>Total <span class="num">'+p.total+'</span></span>'+
+          '<span>Water <span class="num">'+p.water+'</span></span>'+
+          '<span>Yoghurt <span class="num">'+p.yoghurt+'</span></span>'+
+          '<span>Coffee <span class="num">'+p.coffee+'</span></span>'+
+          '<span>Tray <span class="num">'+p.tray+'</span></span>'+
+          '<span>Cutlery <span class="num">'+p.cutlery+'</span></span>';
+        div.appendChild(stats);
+        breakdownContent.appendChild(div);
+      });
+    }
+
+    function imageToJpegBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          const dataUrl = e.target.result;
+          const img = new Image();
+          img.onload = function() {
+            try {
+              let w = img.width, h = img.height;
+              const maxDim = 2000;
+              if (w>maxDim || h>maxDim) {
+                const ratio = Math.min(maxDim/w, maxDim/h);
+                w = Math.round(w*ratio);
+                h = Math.round(h*ratio);
+              }
+              const canvas = document.createElement('canvas');
+              canvas.width = w; canvas.height = h;
+              const ctx = canvas.getContext('2d');
+              ctx.fillStyle = '#ffffff';
+              ctx.fillRect(0,0,w,h);
+              ctx.drawImage(img,0,0,w,h);
+              resolve(canvas.toDataURL('image/jpeg', 0.92));
+            } catch(err) { reject(err); }
+          };
+          img.onerror = function() { resolve(dataUrl); }; // fallback
+          img.src = dataUrl;
+        };
+        reader.onerror = function() { reject(new Error('Failed to read file')); };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    renderPreviews();
+    updateCalcButton();
+    hideStatus();
+    showToast('📊 Upload a report image to start', 1800);
+  })();
+</script>
+</body>
+</html>
