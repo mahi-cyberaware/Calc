@@ -334,7 +334,6 @@
 
     calcBtn.addEventListener('click', handleCalculate);
 
-    // ---- Updated handleCalculate with better error handling ----
     async function handleCalculate() {
       if (isProcessing) return;
       if (imageFiles.length===0) { showToast('Please select at least one image'); return; }
