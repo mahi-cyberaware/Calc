@@ -88,7 +88,6 @@
     <span class="icon">📷</span>
     <div class="label">Upload Report Image</div>
     <div class="hint">Tap to take photo or select from gallery</div>
-    <!-- FIX: removed capture="environment" so both camera & gallery are available -->
     <input type="file" id="fileInput" accept="image/*" multiple />
   </div>
 
@@ -335,6 +334,7 @@
 
     calcBtn.addEventListener('click', handleCalculate);
 
+    // ---- Updated handleCalculate with better error handling ----
     async function handleCalculate() {
       if (isProcessing) return;
       if (imageFiles.length===0) { showToast('Please select at least one image'); return; }
@@ -349,6 +349,9 @@
 
       try {
         const totalImages = imageFiles.length;
+        let anyRows = false;
+        let lastError = '';
+
         for (let i=0; i<totalImages; i++) {
           const file = imageFiles[i];
           setStatus('Processing image '+(i+1)+' of '+totalImages+'…','',true);
@@ -373,16 +376,19 @@
           }
 
           if (!response.ok || !data.success) {
-            setStatus('⚠️ OCR failed for image '+(i+1)+': '+(data.error||'Unknown error'),'error',false);
+            const errorMsg = data?.error || 'Unknown error';
+            lastError = errorMsg;
+            setStatus('⚠️ OCR failed for image '+(i+1)+': '+errorMsg,'error',false);
             continue;
           }
 
           const rows = data.rows || [];
           if (rows.length===0) {
-            setStatus('⚠️ No rows detected in image '+(i+1),'warn',false);
+            setStatus('⚠️ No rows detected in image '+(i+1)+'. Try a clearer photo.','warn',false);
           } else {
             rows.forEach(r => r.page = i+1);
             allRows = allRows.concat(rows);
+            anyRows = true;
           }
           setProgress(10 + ((i+1)/totalImages)*70);
         }
@@ -391,7 +397,10 @@
         setStatus('Analyzing '+allRows.length+' rows…','',true);
 
         if (allRows.length===0) {
-          setStatus('No rows detected in any image. Please upload clearer photos.','error',false);
+          let finalMsg = 'No rows detected in any image. ';
+          if (lastError) finalMsg += 'Last error: ' + lastError + '. ';
+          finalMsg += 'Please upload clearer photos.';
+          setStatus(finalMsg, 'error', false);
           setProgress(100);
           isProcessing = false;
           calcBtn.disabled = false;
