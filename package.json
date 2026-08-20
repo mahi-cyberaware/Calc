@@ -1,15 +1,10 @@
 {
   "name": "calc",
   "version": "1.0.0",
-  "description": "Buy Online Report Counter – OCR based",
-  "main": "index.html",
-  "scripts": {
-    "start": "vercel dev"
+  "engines": {
+    "node": ">=18.x"
   },
   "devDependencies": {
     "@vercel/node": "^2.9.0"
-  },
-  "engines": {
-    "node": ">=18.x"
   }
 }
